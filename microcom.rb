@@ -23,12 +23,15 @@ if (!File.exist?(mic_path))
 end
 
 symbol_table = []
+int_literal_table = []
 
 scanner = LexicalScanner.new(mic_path, lex_path, lis_path, symbol_table)
-scanner.scan
 
-scanner = SyntacticalScanner.new(lex_path, lis_path)
-scanner.scan
-
-semantic = SemanticalPhase.new(lis_path, lex_path, sem_path, symbol_table)
-semantic.run
+if scanner.scan
+  scanner = SyntacticalScanner.new(lex_path, lis_path)
+  if scanner.scan
+    semantic = SemanticalPhase.new(lis_path, lex_path, sem_path,
+        symbol_table, int_literal_table)
+    semantic.run
+  end
+end

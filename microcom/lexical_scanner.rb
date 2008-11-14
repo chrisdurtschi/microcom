@@ -5,7 +5,7 @@
 
 class LexicalScanner
 
-  def initialize(mic_path, lex_path, lis_path, symbol_table)
+  def initialize(mic_path, lex_path, lis_path, symbol_table, int_literal_table)
     @mic_path = mic_path
     @lex_path = lex_path
     @lis_path = lis_path
@@ -14,13 +14,13 @@ class LexicalScanner
     
     # write .lis file with line numbers,
     # read each line to store in @stream
-    File.open(@lis_path, "w") do |lis|      
+    File.open(@lis_path, "w") do |lis|
       File.open(@mic_path, "r") do |mic|
         while line = mic.gets
-          lis << "#{"%03s" % mic.lineno}    #{line}"          
+          lis << "#{"%03s" % mic.lineno}    #{line}"
           buffer.push(line)
         end
-      end      
+      end
     end
     
     @stream = buffer.join
@@ -32,6 +32,7 @@ class LexicalScanner
     
     # the symbol table stores Ids
     @symbol_table = symbol_table
+    @int_literal_table = int_literal_table
     
     # this will store this individual lexeme symbols
     @lexemes = []
@@ -42,7 +43,7 @@ class LexicalScanner
   
   def scan
     # implement scanner psuedo-code from handout
-    while char = read      
+    while char = read
       if char.match(/[A-Z]|[a-z]/)
         buffer_char(char)
         process_id
@@ -83,7 +84,7 @@ class LexicalScanner
       elsif char == "\n"
         @lexemes.push('@')
         @line_num = @line_num.next
-      elsif char != ' ' && char != "\t"
+      elsif !char.match(/\s/)
         @errors.push("ERROR on line #{@line_num}: Invalid character: #{char}")
       end
       
@@ -99,11 +100,13 @@ class LexicalScanner
       write_lis_message(message)
       write_lex
       puts message
+      return true
     else
       message = "Lexical Phase NOT Successful"
       write_lis_message(message)
       write_errors
       puts message
+      return false
     end
     
   end
@@ -190,7 +193,8 @@ class LexicalScanner
     if buffer.length > 4
       @errors.push("ERROR on line #{@line_num}: Int literal too long: #{buffer}")
     else
-      @lexemes.push("IntLiteral_#{buffer}")
+      @int_literal_table.push(buffer) if !@int_literal_table.include?(buffer)
+      @lexemes.push("IntLiteral_#{@int_literal_table.index(buffer)}")
     end
   end
   
