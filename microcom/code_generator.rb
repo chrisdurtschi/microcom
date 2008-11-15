@@ -29,8 +29,13 @@ class CodeGenerator
     add_temps
     
     @instructions.push({:operator => 'END'})
+
+    write_unoptimized_tas
+
+    optimize_instructions
     
-    write_tas
+    write_optimized_tas
+    
     message = 'Code generation successful - .tas file generated'
     write_lis(message)
     puts(message)
@@ -85,7 +90,7 @@ class CodeGenerator
   def add_symbols
     @symbol_table.each do |symbol|
       @instructions.push({:label => "#{symbol}:", :operator => 'DC', 
-          :operand => 0})
+          :operand => '0'})
     end
   end
   
@@ -100,19 +105,66 @@ class CodeGenerator
     temps = []
     @instructions.each do |code|
       operand = code[:operand]
-      if operand && operand.to_s.match(/^_temp\d+$/)
+      if operand && temp_symbol?(operand)
         temps.push(operand) if !temps.include?(operand)
       end
     end
     
     temps.each do |temp|
       @instructions.push({:label => "#{temp}:", :operator => 'DC',
-          :operand => 0})
+          :operand => '0'})
     end
   end
   
-  def write_tas
-    File.open(@tas_path, "w") do |file|
+  def optimize_instructions
+    @instructions.reverse!
+    optimized = []
+    
+    while code = @instructions.pop
+      if code[:operator] == 'STO'
+        # Find of if the next operation is LD
+        next_code = @instructions.pop
+        if next_code && next_code[:operator] == 'LD' && 
+            next_code[:operand] == code[:operand]
+          if temp_symbol?(code[:operand])
+            # This is a STO/LD combo with a temporary variable,
+            # discard both instructions and continue.
+            next
+          else
+            # This is a STO/LD combo with a non-temporary variable,
+            # keep the STO, discard the LD.
+            optimized.push(code)
+          end
+        else
+          # This is not a STO/LD combo, push both instructions back
+          # to the optimized stack.
+          optimized.push(code)
+          optimized.push(next_code)
+        end
+      else
+        # This is not a STO instruction, no optimization needed,
+        # push code onto optimized stack.
+        optimized.push(code)
+      end
+    end
+    
+    @instructions = optimized
+  end
+  
+  def temp_symbol?(symbol)
+    return symbol.match(/^_temp\d+$/)
+  end
+  
+  def write_optimized_tas
+    write_tas(@tas_path)
+  end
+  
+  def write_unoptimized_tas
+    write_tas('unoptimized_' + @tas_path)
+  end
+  
+  def write_tas(tas_path)
+    File.open(tas_path, "w") do |file|
       @instructions.each do |code|
         file.printf("%-9s %-5s %s\n", code[:label], code[:operator], 
             code[:operand])

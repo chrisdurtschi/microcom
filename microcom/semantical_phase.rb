@@ -169,8 +169,8 @@ class SemanticalPhase
             temp = "_temp#{temp_num}"
             temp_num = temp_num.next
             
-            @int_literal_table.push(0) if !@int_literal_table.include?(0)
-            zero = "IntLiteral_#{@int_literal_table.index(0)}"
+            @int_literal_table.push('0') if !@int_literal_table.include?('0')
+            zero = "IntLiteral_#{@int_literal_table.index('0')}"
             
             lexemes[i] = temp
             operand = lexemes.delete_at(i - 1)

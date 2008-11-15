@@ -181,9 +181,8 @@ class LexicalScanner
     if buffer.length > 4
       @errors.push("ERROR on line #{@line_num}: Int literal too long: #{buffer}")
     else
-      int = buffer.to_i
-      @int_literal_table.push(int) if !@int_literal_table.include?(int)
-      @lexemes.push("IntLiteral_#{@int_literal_table.index(int)}")
+      @int_literal_table.push(buffer) if !@int_literal_table.include?(buffer)
+      @lexemes.push("IntLiteral_#{@int_literal_table.index(buffer)}")
     end
   end
   
