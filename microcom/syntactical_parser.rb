@@ -5,17 +5,11 @@
 
 class SyntacticalParser
 
-  def initialize(lex_path, lis_path)
+  def initialize(lex_path, lis_path, lexemes)
     @lex_path = lex_path
     @lis_path = lis_path
     
-    @lexemes = []
-    
-    File.open(lex_path, "r") do |file|
-      while line = file.gets
-        @lexemes.push(line.chomp)
-      end
-    end
+    @lexemes = lexemes
     
     @pointer = 0
     @line_num = 1

@@ -3,37 +3,18 @@ class SemanticalPhase
   @@operators = ['StartSym', 'PlusOp', 'MinusOp', 'MultiplyOp', 'DivideOp',
                  'NegOp', 'LParen', 'RParen', 'AssignOp', 'SemiColon', 'Comma']
 
-  def initialize(lis_path, lex_path, sem_path, symbol_table)
-    @atoms = []
-    @lexemes = []
-    @symbol_table = symbol_table
-    
+  def initialize(sem_path, lis_path, lexemes, atoms, 
+      symbol_table, int_literal_table)
     @lis_path = lis_path
-    @lex_path = lex_path
     @sem_path = sem_path
+
+    @lexemes = []
+    @atoms = atoms
+
+    @symbol_table = symbol_table
+    @int_literal_table = int_literal_table
     
-    load_lexemes
-  end
-  
-  # push all the lexemes for a single line statement
-  # onto the @lexemes stack
-  def load_lexemes
-    statement = []
-    
-    File.open(@lex_path, "r") do |file|
-      while line = file.gets
-        line.chomp!
-            
-        if ['@', 'BeginSym', 'EndSym', 'EofSym'].member?(line)
-          if !statement.empty?
-            @lexemes.push(statement)
-            statement = []
-          end
-        else
-          statement.push(line)
-        end
-      end
-    end
+    divide_lexemes_into_statements(lexemes)
   end
   
   def run
@@ -41,8 +22,30 @@ class SemanticalPhase
       evaluate_expression(line)
     end
     
+    message = 'Semantical phase successful'
     write_sem
+    write_lis(message)
+    puts(message)
   end
+  
+  private
+  
+  # push all the lexemes for a single line statement
+  # onto the @lexemes stack
+  def divide_lexemes_into_statements(lexemes)
+    statement = []
+    
+    lexemes.each do |lexeme|
+      if ['@', 'BeginSym', 'EndSym', 'EofSym'].member?(lexeme)
+        if !statement.empty?
+          @lexemes.push(statement)
+          statement = []
+        end
+      else
+        statement.push(lexeme)
+      end
+    end
+  end  
   
   # evaluate_expression will return either nil,
   # or the name of a variable
@@ -64,9 +67,9 @@ class SemanticalPhase
   
   def read_expression(lexemes)
     lexemes.each do |lexeme|
-      lexeme, id = lexeme.split('_')
-      if (lexeme == 'Id' || lexeme == 'IntLiteral')
-        atom = ['ReadSym', @symbol_table[id.to_i]]
+      first = lexeme.split('_').first
+      if (first == 'Id' || first == 'IntLiteral')
+        atom = ['ReadSym', get_lexeme_value(lexeme)]
         @atoms.push(atom)
       end
     end
@@ -77,6 +80,8 @@ class SemanticalPhase
   def write_expression(lexemes)
     statement = []
     
+    # Reverse lexemes so we can pop off the
+    # lexemes from the beginning of the string.
     lexemes.reverse!
     
     # Get rid of WriteSym
@@ -86,22 +91,24 @@ class SemanticalPhase
     lexemes.pop
     
     while lexeme = lexemes.pop
-      break if lexeme == 'SemiColon'
+      statement.push(lexeme) if lexeme != 'SemiColon'
       
-      if lexeme == 'Comma' || lexeme == 'RParen'
+      if lexeme == 'Comma' || lexeme == 'SemiColon'
         atom = ['WriteSym', evaluate_expression(statement)]
         @atoms.push(atom)
         statement = []
-      else
-        statement.push(lexeme)
       end
     end
    
     return nil
   end
   
+  # If this expression is just a single Id,
+  # possibly followed by a Comma,
+  # just return the Id.
+  # Otherwise, polishize the lexemes.
   def id_expression(lexemes)
-    return lexemes.first if lexemes.length <= 1
+    return get_lexeme_value(lexemes.first) if lexemes.length <= 2
     return polishize(lexemes)
   end
   
@@ -111,8 +118,9 @@ class SemanticalPhase
     operators = []
     operands = []
     
+    operators.push('StartSym')
+    
     lexemes.reverse!
-    lexemes.push('StartSym')
     
     while lexeme = lexemes.pop
       if @@operators.member?(lexeme)
@@ -121,7 +129,7 @@ class SemanticalPhase
         operands.push(lexeme)
       end
     end
-
+    
     return atomize(operands)
   end
   
@@ -144,36 +152,42 @@ class SemanticalPhase
   def atomize(lexemes)
     temp_num = 0
     
-    while !lexemes.empty?
+    while lexemes.length > 1
       lexemes.each_index do |i|
+        puts lexemes.join(', ')
         lexeme = lexemes[i]
+        
         if @@operators.member?(lexeme)
           if lexeme == 'AssignOp'
             lexeme = lexemes.delete_at(i)
             operand = lexemes.delete_at(i - 1)
             id = lexemes.delete_at(i - 2)
-            atom = [lexeme, id, operand]
+            atom = [lexeme, get_lexeme_value(id),
+                    get_lexeme_value(operand)]
             @atoms.push(atom)
             break
           elsif lexeme == 'NegOp'
-            temp = "Temp#{temp_num}"
+            temp = "_temp#{temp_num}"
             temp_num = temp_num.next
-
+            
+            @int_literal_table.push(0) if !@int_literal_table.include?(0)
+            zero = "IntLiteral_#{@int_literal_table.index(0)}"
+            
             lexemes[i] = temp
             operand = lexemes.delete_at(i - 1)
-            atom = ['MinusOp', temp, 'IntLiteral_0', operand]
+            atom = ['MinusOp', temp, get_lexeme_value(zero),
+                    get_lexeme_value(operand)]
             @atoms.push(atom)
             break
           else
-            temp = "Temp#{temp_num}"
+            temp = "_temp#{temp_num}"
             temp_num = temp_num.next
             
             lexemes[i] = temp
             operand2 = lexemes.delete_at(i - 1)
             operand1 = lexemes.delete_at(i - 2)
-            atom = [lexeme, temp, operand1, operand2]
-            
-            puts atom.join(', ')
+            atom = [lexeme, temp, get_lexeme_value(operand1),
+                    get_lexeme_value(operand2)]
             
             @atoms.push(atom)
             break
@@ -186,10 +200,30 @@ class SemanticalPhase
     return @atoms.last[1]
   end
   
+  # If the lexeme is an Id, return the Id stored in the symbol table.
+  # If the lexeme is an IntLiteral, return symbol to reference int.
+  # Otherwise, just return the lexeme.
+  def get_lexeme_value(lexeme)
+    token, value = lexeme.split('_')
+    if token == 'Id'
+      return @symbol_table[value.to_i]
+    elsif token == 'IntLiteral'
+      return "_int#{value}"
+    else
+      return lexeme
+    end
+  end
+  
   def write_sem
-  	File.open(@sem_path, "w") do |sem|
-  		@atoms.each {|atom| sem.puts(atom.join(','))}
-  	end
-	end
+    File.open(@sem_path, "w") do |sem|
+      @atoms.each {|atom| sem.puts(atom.join(','))}
+    end
+  end
+  
+  def write_lis(message)
+    File.open(@lis_path, "a") do |file|
+      file.puts(message)
+    end
+  end
   
 end

@@ -5,37 +5,25 @@
 
 class LexicalScanner
 
-  def initialize(mic_path, lex_path, lis_path, symbol_table, int_literal_table)
+  def initialize(mic_path, lex_path, lis_path, lexemes,
+      symbol_table, int_literal_table)
     @mic_path = mic_path
     @lex_path = lex_path
     @lis_path = lis_path
     
-    buffer = []
-    
-    # write .lis file with line numbers,
-    # read each line to store in @stream
-    File.open(@lis_path, "w") do |lis|
-      File.open(@mic_path, "r") do |mic|
-        while line = mic.gets
-          lis << "#{"%03s" % mic.lineno}    #{line}"
-          buffer.push(line)
-        end
-      end
-    end
-    
-    @stream = buffer.join
-    @pointer = 0
-    @line_num = 1
-    
-    # the buffer is used when processing Ids or Int Literals
-    @buffer = []
+    # this will store this individual lexeme symbols
+    @lexemes = lexemes
     
     # the symbol table stores Ids
     @symbol_table = symbol_table
     @int_literal_table = int_literal_table
     
-    # this will store this individual lexeme symbols
-    @lexemes = []
+    @stream = get_stream
+    @pointer = 0
+    @line_num = 1
+    
+    # the buffer is used when processing Ids or Int Literals
+    @buffer = []
     
     # this will store any errors, and the line number it occured on
     @errors = []
@@ -193,9 +181,27 @@ class LexicalScanner
     if buffer.length > 4
       @errors.push("ERROR on line #{@line_num}: Int literal too long: #{buffer}")
     else
-      @int_literal_table.push(buffer) if !@int_literal_table.include?(buffer)
-      @lexemes.push("IntLiteral_#{@int_literal_table.index(buffer)}")
+      int = buffer.to_i
+      @int_literal_table.push(int) if !@int_literal_table.include?(int)
+      @lexemes.push("IntLiteral_#{@int_literal_table.index(int)}")
     end
+  end
+  
+  def get_stream
+    # write .lis file with line numbers,
+    # read each line to store in @stream
+    buffer = []
+    
+    File.open(@lis_path, "w") do |lis|
+      File.open(@mic_path, "r") do |mic|
+        while line = mic.gets
+          lis << "#{"%03s" % mic.lineno}    #{line}"
+          buffer.push(line)
+        end
+      end
+    end
+    
+    return buffer.join
   end
   
   def write_lex

@@ -13,9 +13,10 @@ path = gets.chomp
 
 mic_path = path
 mic_path += '.mic' if !mic_path.match(/^\w+\.mic$/)
-lex_path = mic_path.gsub('.mic', '.lex')
 lis_path = mic_path.gsub('.mic', '.lis')
+lex_path = mic_path.gsub('.mic', '.lex')
 sem_path = mic_path.gsub('.mic', '.sem')
+tas_path = mic_path.gsub('.mic', '.tas')
 
 if (!File.exist?(mic_path))
   puts "File does not exist: #{mic_path}"
@@ -25,13 +26,16 @@ end
 symbol_table = []
 int_literal_table = []
 
-scanner = LexicalScanner.new(mic_path, lex_path, lis_path, 
+lexemes = []
+atoms = []
+
+scanner = LexicalScanner.new(mic_path, lex_path, lis_path, lexemes,
     symbol_table, int_literal_table)
 
 if scanner.scan
-  parser = SyntacticalParser.new(lex_path, lis_path)
+  parser = SyntacticalParser.new(lex_path, lis_path, lexemes)
   if parser.parse
-    semantic = SemanticalPhase.new(lis_path, lex_path, sem_path,
+    semantic = SemanticalPhase.new(sem_path, lis_path, lexemes, atoms,
         symbol_table, int_literal_table)
     semantic.run
   end
