@@ -7,6 +7,7 @@ require 'microcom/lexical_scanner'
 require 'microcom/syntactical_parser'
 require 'microcom/semantical_phase'
 require 'microcom/precedence_table'
+require 'microcom/code_generator'
 
 puts "Enter .mic file, with or without extension:"
 path = gets.chomp
@@ -38,5 +39,9 @@ if scanner.scan
     semantic = SemanticalPhase.new(sem_path, lis_path, lexemes, atoms,
         symbol_table, int_literal_table)
     semantic.run
+    
+    generator = CodeGenerator.new(lis_path, tas_path, atoms, symbol_table, 
+        int_literal_table)
+    generator.generate
   end
 end

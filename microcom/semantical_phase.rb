@@ -22,7 +22,7 @@ class SemanticalPhase
       evaluate_expression(line)
     end
     
-    message = 'Semantical phase successful'
+    message = 'Semantical phase successful - .sem file generated'
     write_sem
     write_lis(message)
     puts(message)
@@ -154,7 +154,6 @@ class SemanticalPhase
     
     while lexemes.length > 1
       lexemes.each_index do |i|
-        puts lexemes.join(', ')
         lexeme = lexemes[i]
         
         if @@operators.member?(lexeme)

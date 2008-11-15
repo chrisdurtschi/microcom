@@ -37,8 +37,8 @@ class SyntacticalParser
   
   def write_lis(message)
     File.open(@lis_path, "a") do |file|
-      file.puts "#{message}\n\n"
-      @errors.each {|e| file.puts e}
+      file.puts "#{message}\n"
+      @errors.each {|e| file.puts("\n#{e}")}
     end
   end
   
