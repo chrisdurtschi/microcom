@@ -4,7 +4,7 @@
 # MicroCom - Main Driver
 
 require 'microcom/lexical_scanner'
-require 'microcom/syntactical_scanner'
+require 'microcom/syntactical_parser'
 require 'microcom/semantical_phase'
 require 'microcom/precedence_table'
 
@@ -25,11 +25,12 @@ end
 symbol_table = []
 int_literal_table = []
 
-scanner = LexicalScanner.new(mic_path, lex_path, lis_path, symbol_table)
+scanner = LexicalScanner.new(mic_path, lex_path, lis_path, 
+    symbol_table, int_literal_table)
 
 if scanner.scan
-  scanner = SyntacticalScanner.new(lex_path, lis_path)
-  if scanner.scan
+  parser = SyntacticalParser.new(lex_path, lis_path)
+  if parser.parse
     semantic = SemanticalPhase.new(lis_path, lex_path, sem_path,
         symbol_table, int_literal_table)
     semantic.run

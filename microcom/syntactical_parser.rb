@@ -3,7 +3,7 @@
 # David Hart
 # MicroCom - Syntactical Phase
 
-class SyntacticalScanner
+class SyntacticalParser
 
   def initialize(lex_path, lis_path)
     @lex_path = lex_path
@@ -23,15 +23,23 @@ class SyntacticalScanner
     @errors = []    
   end
 
-  def scan
+  def parse
     system_goal
     
     message = "Syntactical Phase Successful" if @errors.empty?
     message = "Syntactical Phase NOT Successful" if !@errors.empty?
     write_lis(message)
-    write_lex if @errors.empty?
     puts message
+        
+    if @errors.empty?
+      write_lex
+      return true
+    else
+      return false
+    end
   end
+  
+  private
   
   def write_lis(message)
     File.open(@lis_path, "a") do |file|
