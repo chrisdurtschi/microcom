@@ -112,12 +112,14 @@ class SyntacticalParser
   
   # All methods called by statement_list will have a boolean return value,
   # indicating if there were any syntax errors encountered.
-  # If a syntax error is encountered, we want to stop processing the current statement,
-  # and return to statement_list to process the next statement.
+  # If a syntax error is encountered, we want to stop processing the current
+  # statement, and return to statement_list to process the next statement.
   def statement_list
     statement
     while true
-      if (next_token == 'Id' || next_token == 'ReadSym' || next_token == 'WriteSym')
+      if (next_token == 'Id' || next_token == 'ReadSym' ||
+          next_token == 'WriteSym' || next_token == 'IfSym' ||
+          next_token == 'WhileSym')
         statement
       else
         break
@@ -144,8 +146,30 @@ class SyntacticalParser
         return false if !expression_list
         return false if !match('RParen')
         return false if !match('SemiColon')
+      when 'IfSym'
+        return false if !match('IfSym')
+        return false if !match('LParen')
+        return false if !expression
+        return false if !condition
+        return false if !expression
+        return false if !match('RParen')
+        return false if !match('ThenSym')
+        statement_list
+        return false if !else_stub
+      when 'WhileSym'
+        return false if !match('WhileSym')
+        return false if !match('LParen')
+        return false if !expression
+        return false if !condition
+        return false if !expression
+        return false if !match('RParen')
+        return false if !match('LoopSym')
+        statement_list
+        return false if !match('EndLoopSym')
+        return false if !match('SemiColon')
       else
-        syntax_error(['Id', 'ReadSym', 'WriteSym'], next_token)
+        valid = ['Id', 'ReadSym', 'WriteSym', 'IfSym', 'WhileSym']
+        syntax_error(valid, next_token)
         return false
     end
       
@@ -188,6 +212,47 @@ class SyntacticalParser
     end
   end
   
+  def condition
+    case next_token
+    when 'EqSym'
+      return false if !match('EqSym')
+    when 'NotEqSym'
+      return false if !match('NotEqSym')
+    when 'GrSym'
+      return false if !match('GrSym')
+    when 'GrEqSym'
+      return false if !match('GrEqSym')
+    when 'LsSym'
+      return false if !match('LsSym')
+    when 'LsEqSym'
+      return false if !match('LsEqSym')
+    else
+      valid = ['EqSym', 'NotEqSym', 'GrSym', 'GrEqSym', 'LsSym', 'LsEqSym']
+      syntax_error(valid, next_token)
+      return false
+    end
+    
+    return true
+  end
+  
+  def else_stub
+    case next_token
+    when 'ElseSym'
+      return false if !match('ElseSym')
+      statement_list
+      return false if !match('EndIfSym')
+      return false if !match('SemiColon')
+    when 'EndIfSym'
+      return false if !match('EndIfSym')
+      return false if !match('SemiColon')
+    else
+      syntax_error(['ElseSym', 'EndIfSym'], next_token)
+      return false
+    end
+    
+    return true
+  end
+  
   def factor
     return false if !primary
     while true
@@ -202,21 +267,21 @@ class SyntacticalParser
   
   def primary
     case next_token
-      when 'MinusOp'
-        replace_neg_op
-        return false if !match('NegOp')
-        return false if !primary
-      when 'LParen'
-        return false if !match('LParen')
-        return false if !expression
-        return false if !match('RParen')
-      when 'Id'
-        return false if !match('Id')
-      when 'IntLiteral'
-        return false if !match('IntLiteral')
-      else
-        syntax_error(['MinusOp', 'LParen', 'Id', 'IntLiteral'], next_token)
-        return false
+    when 'MinusOp'
+      replace_neg_op
+      return false if !match('NegOp')
+      return false if !primary
+    when 'LParen'
+      return false if !match('LParen')
+      return false if !expression
+      return false if !match('RParen')
+    when 'Id'
+      return false if !match('Id')
+    when 'IntLiteral'
+      return false if !match('IntLiteral')
+    else
+      syntax_error(['MinusOp', 'LParen', 'Id', 'IntLiteral'], next_token)
+      return false
     end
       
     return true
@@ -224,13 +289,13 @@ class SyntacticalParser
   
   def mult_op
     case next_token
-      when 'MultiplyOp'
-        return false if !match('MultiplyOp')
-      when 'DivideOp'
-        return false if !match('DivideOp')
-      else
-        syntax_error(['MultiplyOp', 'DivideOp'], next_token)
-        return false
+    when 'MultiplyOp'
+      return false if !match('MultiplyOp')
+    when 'DivideOp'
+      return false if !match('DivideOp')
+    else
+      syntax_error(['MultiplyOp', 'DivideOp'], next_token)
+      return false
     end
     
     return true
@@ -238,13 +303,13 @@ class SyntacticalParser
   
   def add_op
     case next_token
-      when 'PlusOp'
-        return false if !match('PlusOp')
-      when 'MinusOp'
-        return false if !match('MinusOp')
-      else
-        syntax_error(['PlusOp', 'MinusOp'], next_token)
-        return false
+    when 'PlusOp'
+      return false if !match('PlusOp')
+    when 'MinusOp'
+      return false if !match('MinusOp')
+    else
+      syntax_error(['PlusOp', 'MinusOp'], next_token)
+      return false
     end
     
     return true

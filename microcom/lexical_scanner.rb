@@ -52,6 +52,29 @@ class LexicalScanner
         @lexemes.push('MultiplyOp')
       elsif char == '/'
         @lexemes.push('DivideOp')
+      elsif char == '='
+        @lexemes.push('EqSym')
+      elsif char == '!'
+        if inspect == '='
+          advance
+          @lexemes.push('NotEqSym')
+        else
+          @errors.push("ERROR on line #{@line_num}: Illegal starting token for symbol: #{char}")
+        end
+      elsif char == '<'
+        if inspect == '='
+          advance
+          @lexemes.push('LsEqSym')
+        else
+          @lexemes.push('LsSym')
+        end
+      elsif char == '>'
+        if inspect == '='
+          advance
+          @lexemes.push('GrEqSym')
+        else
+          @lexemes.push('GrSym')
+        end
       elsif char == ':'
         if inspect == '='
           advance
@@ -59,8 +82,6 @@ class LexicalScanner
         else
           @errors.push("ERROR on line #{@line_num}: Illegal starting token for symbol: #{char}")
         end
-      elsif char == '='
-        @errors.push("ERROR on line #{@line_num}: Illegal starting token for symbol: #{char}")
       elsif char == '-'
         if inspect == '-'
           nil until read == "\n"
@@ -141,6 +162,20 @@ class LexicalScanner
       @lexemes.push('ReadSym')
     elsif buffer == 'write'
       @lexemes.push('WriteSym')
+    elsif buffer == 'if'
+      @lexemes.push('IfSym')
+    elsif buffer == 'then'
+      @lexemes.push('ThenSym')
+    elsif buffer == 'else'
+      @lexemes.push('ElseSym')
+    elsif buffer == 'endif'
+      @lexemes.push('EndIfSym')
+    elsif buffer == 'while'
+      @lexemes.push('WhileSym')
+    elsif buffer == 'loop'
+      @lexemes.push('LoopSym')
+    elsif buffer == 'endloop'
+      @lexemes.push('EndLoopSym')
     else
       insert_symbol_table
     end
