@@ -2,6 +2,9 @@ class SemanticalPhase
 
   @@operators = ['StartSym', 'PlusOp', 'MinusOp', 'MultiplyOp', 'DivideOp',
                  'NegOp', 'LParen', 'RParen', 'AssignOp', 'SemiColon', 'Comma']
+                 
+  @@comparison_operators = ['EqSym', 'NotEqSym', 'LsSym', 'LsEqSym',
+                            'GrSym', 'GrEqSym']
 
   def initialize(sem_path, lis_path, lexemes, atoms, 
       symbol_table, int_literal_table)
@@ -10,6 +13,8 @@ class SemanticalPhase
 
     @lexemes = []
     @atoms = atoms
+    
+    @temp_num = 0
 
     @symbol_table = symbol_table
     @int_literal_table = int_literal_table
@@ -54,11 +59,15 @@ class SemanticalPhase
     
     return if !lexeme
     
-    if (lexeme == 'ReadSym')
+    if lexeme == 'ReadSym'
       return read_expression(lexemes)
-    elsif (lexeme == 'WriteSym')
+    elsif lexeme == 'WriteSym'
       return write_expression(lexemes)
-    elsif (lexeme == 'Id')
+    elsif lexeme == 'IfSym'
+      return if_expression(lexemes)
+    elsif lexeme == 'WhileSym'
+      return while_expression
+    elsif lexeme == 'Id'
       return id_expression(lexemes)
     else
     	return polishize(lexemes)  
@@ -101,6 +110,26 @@ class SemanticalPhase
     end
    
     return nil
+  end
+  
+  def if_expression
+    statement = []
+    atom = ['Tst']
+    lexemes.reverse!
+    
+    # Get rid of IfSym
+    lexemes.pop
+    
+    # Get rid of LParen
+    lexemes.pop
+    
+    while lexeme = lexemes.pop
+      statement.push(lexeme)
+    end
+  end
+  
+  def while_expression
+    
   end
   
   # If this expression is just a single Id,
@@ -166,8 +195,7 @@ class SemanticalPhase
             @atoms.push(atom)
             break
           elsif lexeme == 'NegOp'
-            temp = "_temp#{temp_num}"
-            temp_num = temp_num.next
+            temp = get_next_temp
             
             @int_literal_table.push('0') if !@int_literal_table.include?('0')
             zero = "IntLiteral_#{@int_literal_table.index('0')}"
@@ -179,8 +207,7 @@ class SemanticalPhase
             @atoms.push(atom)
             break
           else
-            temp = "_temp#{temp_num}"
-            temp_num = temp_num.next
+            temp = get_next_temp
             
             lexemes[i] = temp
             operand2 = lexemes.delete_at(i - 1)
@@ -211,6 +238,12 @@ class SemanticalPhase
     else
       return lexeme
     end
+  end
+  
+  def get_next_temp
+    temp = "_temp#{@temp_num}"
+    @temp_num = @temp_num.next
+    return temp
   end
   
   def write_sem

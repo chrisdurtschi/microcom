@@ -21,6 +21,7 @@ class CodeGenerator
   
   def generate
     create_instructions_from_atoms
+    optimize_instructions
     
     @instructions.push({:operator => 'STOP'})
     
@@ -29,12 +30,8 @@ class CodeGenerator
     add_temps
     
     @instructions.push({:operator => 'END'})
-
-    write_unoptimized_tas
-
-    optimize_instructions
     
-    write_optimized_tas
+    write_tas
     
     message = 'Code generation successful - .tas file generated'
     write_lis(message)
@@ -155,16 +152,8 @@ class CodeGenerator
     return symbol.match(/^_temp\d+$/)
   end
   
-  def write_optimized_tas
-    write_tas(@tas_path)
-  end
-  
-  def write_unoptimized_tas
-    write_tas('unoptimized_' + @tas_path)
-  end
-  
-  def write_tas(tas_path)
-    File.open(tas_path, "w") do |file|
+  def write_tas
+    File.open(@tas_path, "w") do |file|
       @instructions.each do |code|
         file.printf("%-9s %-5s %s\n", code[:label], code[:operator], 
             code[:operand])
