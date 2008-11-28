@@ -11,9 +11,11 @@ class SemanticalPhase
     @lis_path = lis_path
     @sem_path = sem_path
 
+    @labels = []
     @lexemes = []
     @atoms = atoms
     
+    @label_num = 0
     @temp_num = 0
 
     @symbol_table = symbol_table
@@ -65,10 +67,22 @@ class SemanticalPhase
       return write_expression(lexemes)
     elsif lexeme == 'IfSym'
       return if_expression(lexemes)
+    elsif lexeme == 'ElseSym'
+      label_atom = ['Lbl', pop_next_label]
+      branch_atom = ['Br', push_next_label]
+      @atoms.push(branch_atom)
+      @atoms.push(label_atom)
+    elsif lexeme == 'EndIfSym'
+      @atoms.push(['Lbl', pop_next_label])
     elsif lexeme == 'WhileSym'
-      return while_expression
+      return while_expression(lexemes)
+    elsif lexeme == 'EndLoopSym'
+      @atoms.push(['Br', pop_next_label])
+      @atoms.push(['Lbl', pop_next_label])
     elsif lexeme == 'Id'
       return id_expression(lexemes)
+    elsif lexeme == 'IntLiteral'
+      return int_literal_expression(lexemes)
     else
     	return polishize(lexemes)  
     end        
@@ -82,8 +96,6 @@ class SemanticalPhase
         @atoms.push(atom)
       end
     end
-    
-    return nil
   end
   
   def write_expression(lexemes)
@@ -108,13 +120,12 @@ class SemanticalPhase
         statement = []
       end
     end
-   
-    return nil
   end
   
-  def if_expression
+  def if_expression(lexemes)
     statement = []
-    atom = ['Tst']
+    test_atom = ['Tst']
+    comparison_operator = ''
     lexemes.reverse!
     
     # Get rid of IfSym
@@ -124,19 +135,68 @@ class SemanticalPhase
     lexemes.pop
     
     while lexeme = lexemes.pop
-      statement.push(lexeme)
+      if lexeme == 'ThenSym'
+        test_atom.push(evaluate_expression(statement))
+        break
+      elsif @@comparison_operators.include?(lexeme)
+        test_atom.push(evaluate_expression(statement))
+        statement = []
+        comparison_operator = lexeme
+      else
+        statement.push(lexeme)
+      end
     end
+    
+    test_atom.push(comparison_operator)
+    test_atom.push(push_next_label)
+    @atoms.push(test_atom)
   end
   
-  def while_expression
+  def while_expression(lexemes)
+    statement = []
+    test_atom = ['Tst']
+    comparison_operator = ''
+    lexemes.reverse!
     
+    # Get rid of WhileSym
+    lexemes.pop
+    
+    # Get rid of LParen
+    lexemes.pop
+    
+    while lexeme = lexemes.pop
+      if lexeme == 'LoopSym'
+        test_atom.push(evaluate_expression(statement))
+        break
+      elsif @@comparison_operators.include?(lexeme)
+        test_atom.push(evaluate_expression(statement))
+        statement = []
+        comparison_operator = lexeme
+      else
+        statement.push(lexeme)
+      end
+    end
+    
+    test_atom.push(comparison_operator)
+    test_atom.push(push_next_label)
+    @atoms.push(['Lbl', push_next_label])
+    @atoms.push(test_atom)
   end
   
   # If this expression is just a single Id,
-  # possibly followed by a Comma,
+  # possibly followed by a Comma or RParen,
   # just return the Id.
   # Otherwise, polishize the lexemes.
   def id_expression(lexemes)
+    return get_lexeme_value(lexemes.first) if lexemes.length <= 2
+    return polishize(lexemes)
+  end
+  
+  # If this expression is just a single IntLiteral,
+  # possibly followed by a Comma or RParen,
+  # just return the IntLiteral.
+  # Otherwise, polishize the lexemes.
+  def int_literal_expression(lexemes)
     return get_lexeme_value(lexemes.first) if lexemes.length <= 2
     return polishize(lexemes)
   end
@@ -244,6 +304,20 @@ class SemanticalPhase
     temp = "_temp#{@temp_num}"
     @temp_num = @temp_num.next
     return temp
+  end
+  
+  # This will create a new label, push it onto the @labels stack,
+  # and return the label
+  def push_next_label
+    label = "lbl#{@label_num}"
+    @label_num = @label_num.next
+    @labels.push(label)
+    return label
+  end
+  
+  # This will pop the first label off the stack, and return it as an atom
+  def pop_next_label
+    return @labels.pop
   end
   
   def write_sem
