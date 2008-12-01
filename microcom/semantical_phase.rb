@@ -139,6 +139,7 @@ class SemanticalPhase
         test_atom.push(evaluate_expression(statement))
         break
       elsif @@comparison_operators.include?(lexeme)
+        statement.push('Comma')
         test_atom.push(evaluate_expression(statement))
         statement = []
         comparison_operator = lexeme
@@ -169,6 +170,7 @@ class SemanticalPhase
         test_atom.push(evaluate_expression(statement))
         break
       elsif @@comparison_operators.include?(lexeme)
+        statement.push('Comma')
         test_atom.push(evaluate_expression(statement))
         statement = []
         comparison_operator = lexeme
@@ -204,6 +206,8 @@ class SemanticalPhase
   # This method will order a statement
   # into Reverse Polish Notation
   def polishize(lexemes)
+    puts "polishize: #{lexemes.join(', ')}"
+    
     operators = []
     operands = []
     
@@ -241,10 +245,12 @@ class SemanticalPhase
   def atomize(lexemes)
     temp_num = 0
     
+    puts "atomize: #{lexemes.join(', ')}" 
+    
     while lexemes.length > 1
       lexemes.each_index do |i|
         lexeme = lexemes[i]
-        
+
         if @@operators.member?(lexeme)
           if lexeme == 'AssignOp'
             lexeme = lexemes.delete_at(i)
