@@ -206,8 +206,6 @@ class SemanticalPhase
   # This method will order a statement
   # into Reverse Polish Notation
   def polishize(lexemes)
-    puts "polishize: #{lexemes.join(', ')}"
-    
     operators = []
     operands = []
     
@@ -243,10 +241,6 @@ class SemanticalPhase
   # This method takes a collection of lexemes
   # in Reverse Polish Notation, and creates atoms
   def atomize(lexemes)
-    temp_num = 0
-    
-    puts "atomize: #{lexemes.join(', ')}" 
-    
     while lexemes.length > 1
       lexemes.each_index do |i|
         lexeme = lexemes[i]
